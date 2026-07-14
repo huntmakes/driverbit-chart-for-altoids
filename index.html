@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Driver Bits Organizer Label for Altoids</title>
+  
+  <!-- Tailwind CSS for sleek interface around the label -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    @media print {
+      @page { 
+        size: letter; 
+        margin: 0.4in; 
+      }
+      body { 
+        background: #ffffff !important; 
+        padding: 0 !important;
+        display: block !important;
+      }
+      /* Hide all UI shell elements when printing */
+      .no-print { 
+        display: none !important; 
+      }
+      /* Force high contrast and color printing */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .label-container {
+        margin: 0 auto;
+        box-shadow: none !important;
+        border: none !important;
+        background: transparent !important;
+        width: 94mm !important;
+        height: 58.4mm !important;
+      }
+    }
+
+    :root {
+      --bit-fill: #000000;
+      --bit-ring: #ff8647;
+      --bg-color: #ffffff;
+      --text-color: #0042aa;
+      --muted-text: #939393;
+      --den-color: #939393;
+      --font-size: 17px;
+      --label-x: 19px;
+      --label-y: -1px;
+      --label-align: center;
+      --frac-x: 7px;
+      --y000-offset: -1px;
+      --y000-scale: 0.9;
+      --y00-offset: 5px;
+      --slash-kern-before: -3px;
+      --slash-kern: -1.5px;
+      --slash-size: 0.7em;
+      --den-size: 0.65em;
+      --empty-dot-y: -6px;
+      --label-outline-y: 0px;
+    }
+    
+    * { 
+      box-sizing: border-box; 
+    }
+    
+    body {
+      font-family: ui-monospace, "SF Mono", "Courier New", monospace;
+    }
+
+    /* Precise Altoids inner lid fit dimension specs (94mm x 58.4mm, 14.8mm corner radius) */
+    .label {
+      width: 94mm;
+      height: 58.4mm;
+      background: #ffffff;
+      border: 0.75px solid #111111;
+      border-radius: 14.8mm;
+      overflow: hidden;
+      padding: 6px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      color: #111111;
+      position: relative;
+      transform: translateY(var(--label-outline-y));
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      height: 18.4%;
+      transform: translateY(calc(var(--label-outline-y) * -1));
+    }
+
+    .row.spares {
+      height: 8%;
+    }
+
+    .row:last-child {
+      border-bottom: none;
+    }
+
+    .cell {
+      position: relative;
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+
+    .cell.spare-cell {
+      cursor: default;
+    }
+
+    .empty-dot {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #bbbbbb;
+    }
+
+    .spares .empty-dot {
+      top: calc(50% + var(--empty-dot-y));
+    }
+
+    .cell > * {
+      pointer-events: none !important;
+    }
+
+    .cell-label {
+      position: absolute;
+      right: auto;
+      bottom: var(--label-y);
+      z-index: 2;
+      line-height: 0.95;
+      text-align: var(--label-align);
+      font-size: var(--font-size);
+      font-weight: 700;
+      color: var(--text-color);
+      letter-spacing: -0.4px;
+      text-shadow:
+        1.5px 1.5px 0 var(--bg-color),
+        -1.5px -1.5px 0 var(--bg-color),
+        1.5px -1.5px 0 var(--bg-color),
+        -1.5px 1.5px 0 var(--bg-color),
+        1.5px 0 0 var(--bg-color),
+        -1.5px 0 0 var(--bg-color),
+        0 1.5px 0 var(--bg-color),
+        0 -1.5px 0 var(--bg-color);
+    }
+
+    .cell-label {
+      left: var(--label-x);
+      width: calc(100% - var(--label-x));
+    }
+
+    .shape-container {
+      position: absolute;
+      left: 1px;
+      top: 1px;
+    }
+
+    .spares .cell-label { 
+      color: var(--muted-text, #939393); 
+    }
+    
+    .empty { 
+      color: transparent; 
+    }
+
+    #label .cell-label.frac-offset {
+      left: var(--frac-x);
+      width: calc(100% - var(--frac-x));
+    }
+    #label .cell-label.y000-offset {
+      left: var(--y000-offset);
+      width: calc(100% - var(--y000-offset));
+      font-size: calc(var(--font-size) * var(--y000-scale));
+    }
+    #label .cell-label.y00-offset {
+      left: var(--y00-offset);
+      width: calc(100% - var(--y00-offset));
+    }
+
+    .inline-frac {
+      display: inline-block;
+      white-space: nowrap;
+    }
+    .inline-frac .num {
+      font-weight: 700;
+    }
+    .inline-frac .sub-frac {
+      display: inline-block;
+      position: relative;
+      top: 0.32em;
+      color: var(--muted-text, #939393);
+    }
+    .inline-frac .slash {
+      font-size: var(--slash-size);
+      margin-left: var(--slash-kern-before);
+      margin-right: var(--slash-kern);
+      font-weight: 600;
+      color: var(--den-color);
+    }
+    .inline-frac .den {
+      font-size: var(--den-size);
+      font-weight: 700;
+      color: var(--den-color);
+    }
+
+    @media screen {
+      .cell {
+        cursor: pointer;
+        transition: background-color 0.15s, outline 0.15s;
+      }
+      .cell:hover {
+        background-color: rgba(16, 185, 129, 0.12) !important;
+        outline: 1.5px dashed #10b981;
+        outline-offset: -1px;
+        z-index: 10;
+      }
+      .cell.spare-cell:hover {
+        background-color: transparent !important;
+        outline: none !important;
+      }
+    }
+
+    .stepper {
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .stepper button {
+      height: 11px;
+      width: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      font-size: 8px;
+      color: #a8a29e;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+    }
+    .stepper button:hover {
+      color: #059669;
+    }
+  </style>
+</head>
+<body class="bg-[#eceae4] min-h-screen flex flex-col items-center justify-start p-4 md:p-8">
+
+  <div class="no-print w-full max-w-4xl bg-white rounded-2xl shadow-xl border border-stone-200 p-6 mb-8 flex flex-col gap-6 font-sans">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-stone-100 pb-4 gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-stone-800 tracking-tight">Driver Bits Organizer Label for Altoids</h1>
+        <p class="text-sm text-stone-500 mt-1">Click any slot to edit.</p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <button onclick="openSlotEditor(0, 2)" class="bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-300 text-sm font-medium px-3.5 py-2.5 rounded-lg shadow-sm transition flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+          <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+          Edit Slots
+        </button>
+        <button onclick="openConfigModal()" class="bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-300 text-sm font-medium px-3.5 py-2.5 rounded-lg shadow-sm transition flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+          <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+          Config
+        </button>
+        <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-sm transition flex items-center gap-2 shrink-0 whitespace-nowrap">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+          Print Label
+        </button>
+      </div>
+    </div>
+
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-sm font-semibold text-stone-700">Colors</h2>
+      <button onclick="toggleAdvanced()" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-stone-200 text-stone-700 hover:bg-stone-300 transition">
+        <span id="advancedToggleText">Show Advanced</span>
+      </button>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" oninput="persistState()">
+      <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">Shape Fill Color</label>
+        <div class="flex items-center gap-3">
+          <input type="color" id="fillColorPicker" value="#000000" oninput="updateFillColor(this.value)" class="w-9 h-9 border border-stone-300 rounded-lg cursor-pointer bg-transparent">
+          <span id="fillColorHex" class="text-xs font-mono text-stone-500 uppercase">#000000</span>
+        </div>
+      </div>
+
+      <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">Circle Fill Color</label>
+        <div class="flex items-center gap-3">
+          <input type="color" id="ringColorPicker" value="#ff8647" oninput="updateRingColor(this.value)" class="w-9 h-9 border border-stone-300 rounded-lg cursor-pointer bg-transparent">
+          <span id="ringColorHex" class="text-xs font-mono text-stone-500 uppercase">#ff8647</span>
+        </div>
+      </div>
+
+      <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">Text Color</label>
+        <div class="flex items-center gap-3">
+          <input type="color" id="textColorPicker" value="#0042aa" oninput="updateTextColor(this.value)" class="w-9 h-9 border border-stone-300 rounded-lg cursor-pointer bg-transparent">
+          <span id="textColorHex" class="text-xs font-mono text-stone-500 uppercase">#0042aa</span>
+        </div>
+      </div>
+
+      <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">Denominator Color</label>
+        <div class="flex items-center gap-3">
+          <input type="color" id="denColorPicker" value="#939393" oninput="updateDenColor(this.value)" class="w-9 h-9 border border-stone-300 rounded-lg cursor-pointer bg-transparent">
+          <span id="denColorHex" class="text-xs font-mono text-stone-500 uppercase">#939393</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="advancedSection" class="hidden" oninput="persistState()">
+      <h2 class="text-sm font-semibold text-stone-700 mb-4">Advanced Settings</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">Altoids Tin Outline Y</label>
+        <div class="flex items-center gap-4">
+          <input type="range" id="labelOutlineYSlider" min="-12" max="12" step="1" value="0" oninput="updateLabelOutlineY(this.value)" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+          <div class="stepper">
+            <button type="button" onclick="stepSlider('labelOutlineYSlider',1)" aria-label="Increase">&#9650;</button>
+            <button type="button" onclick="stepSlider('labelOutlineYSlider',-1)" aria-label="Decrease">&#9660;</button>
+          </div>
+          <span id="labelOutlineYDisplay" class="text-xs font-mono font-bold text-stone-700 min-w-[28px]">0px</span>
+        </div>
+      </div>
+
+      <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">Text Font Size</label>
+        <div class="flex items-center gap-4">
+          <input type="range" id="fontSizeSlider" min="7.5" max="25" step="0.5" value="18" oninput="updateFontSize(this.value)" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+          <div class="stepper">
+            <button type="button" onclick="stepSlider('fontSizeSlider',1)" aria-label="Increase">&#9650;</button>
+            <button type="button" onclick="stepSlider('fontSizeSlider',-1)" aria-label="Decrease">&#9660;</button>
+          </div>
+          <span id="fontSizeDisplay" class="text-xs font-mono font-bold text-stone-700 min-w-[36px]">18.0px</span>
+        </div>
+      </div>
+
+      <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">Horizontal Offset (X)</label>
+        <div class="flex items-center gap-4">
+          <input type="range" id="labelXSlider" min="0" max="22" step="1" value="0" oninput="updateLabelX(this.value)" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+          <div class="stepper">
+            <button type="button" onclick="stepSlider('labelXSlider',1)" aria-label="Increase">&#9650;</button>
+            <button type="button" onclick="stepSlider('labelXSlider',-1)" aria-label="Decrease">&#9660;</button>
+          </div>
+          <span id="labelXDisplay" class="text-xs font-mono font-bold text-stone-700 min-w-[28px]">19px</span>
+        </div>
+      </div>
+
+      <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">Text Y-Offset</label>
+        <div class="flex items-center gap-4">
+          <input type="range" id="labelYSlider" min="-8" max="16" step="1" value="-1" oninput="updateLabelY(this.value)" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+          <div class="stepper">
+            <button type="button" onclick="stepSlider('labelYSlider',1)" aria-label="Increase">&#9650;</button>
+            <button type="button" onclick="stepSlider('labelYSlider',-1)" aria-label="Decrease">&#9660;</button>
+          </div>
+          <span id="labelYDisplay" class="text-xs font-mono font-bold text-stone-700 min-w-[28px]">-1px</span>
+        </div>
+      </div>
+
+      <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">Text Justification</label>
+        <div class="flex gap-1.5">
+          <button id="alignLeftBtn" onclick="updateAlignment('left'); persistState();" class="px-2.5 py-1.5 text-xs font-medium rounded-md bg-stone-100 text-stone-600 hover:bg-stone-200 transition grow">Left</button>
+          <button id="alignCenterBtn" onclick="updateAlignment('center'); persistState();" class="px-2.5 py-1.5 text-xs font-medium rounded-md bg-stone-200 border border-stone-300 text-stone-800 transition grow">Center</button>
+          <button id="alignRightBtn" onclick="updateAlignment('right'); persistState();" class="px-2.5 py-1.5 text-xs font-medium rounded-md bg-stone-100 text-stone-600 hover:bg-stone-200 transition grow">Right</button>
+        </div>
+      </div>
+
+      <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">Fraction X-Offset</label>
+        <div class="flex items-center gap-4">
+          <input type="range" id="fracXSlider" min="-8" max="16" step="1" value="7" oninput="updateFracX(this.value)" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+          <div class="stepper">
+            <button type="button" onclick="stepSlider('fracXSlider',1)" aria-label="Increase">&#9650;</button>
+            <button type="button" onclick="stepSlider('fracXSlider',-1)" aria-label="Decrease">&#9660;</button>
+          </div>
+          <span id="fracXDisplay" class="text-xs font-mono font-bold text-stone-700 min-w-[28px]">7px</span>
+        </div>
+      </div>
+
+      <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">000 Offset</label>
+        <div class="flex items-center gap-4">
+          <input type="range" id="y000OffsetSlider" min="-8" max="16" step="1" value="-1" oninput="updateY000Offset(this.value)" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+          <div class="stepper">
+            <button type="button" onclick="stepSlider('y000OffsetSlider',1)" aria-label="Increase">&#9650;</button>
+            <button type="button" onclick="stepSlider('y000OffsetSlider',-1)" aria-label="Decrease">&#9660;</button>
+          </div>
+          <span id="y000OffsetDisplay" class="text-xs font-mono font-bold text-stone-700 min-w-[28px]">-1px</span>
+        </div>
+      </div>
+
+      <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">000 Size</label>
+        <div class="flex items-center gap-4">
+          <input type="range" id="y000ScaleSlider" min="0.5" max="1.2" step="0.05" value="0.9" oninput="updateY000Scale(this.value)" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+          <div class="stepper">
+            <button type="button" onclick="stepSlider('y000ScaleSlider',1)" aria-label="Increase">&#9650;</button>
+            <button type="button" onclick="stepSlider('y000ScaleSlider',-1)" aria-label="Decrease">&#9660;</button>
+          </div>
+          <span id="y000ScaleDisplay" class="text-xs font-mono font-bold text-stone-700 min-w-[36px]">0.90x</span>
+        </div>
+      </div>
+
+      <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">00 Offset</label>
+        <div class="flex items-center gap-4">
+          <input type="range" id="y00OffsetSlider" min="-8" max="16" step="1" value="5" oninput="updateY00Offset(this.value)" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+          <div class="stepper">
+            <button type="button" onclick="stepSlider('y00OffsetSlider',1)" aria-label="Increase">&#9650;</button>
+            <button type="button" onclick="stepSlider('y00OffsetSlider',-1)" aria-label="Decrease">&#9660;</button>
+          </div>
+          <span id="y00OffsetDisplay" class="text-xs font-mono font-bold text-stone-700 min-w-[28px]">5px</span>
+        </div>
+      </div>
+
+      <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">Pre-Slash Kerning</label>
+        <div class="flex items-center gap-4">
+          <input type="range" id="slashKernBeforeSlider" min="-5" max="5" step="0.5" value="-3" oninput="updateSlashKernBefore(this.value)" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+          <div class="stepper">
+            <button type="button" onclick="stepSlider('slashKernBeforeSlider',1)" aria-label="Increase">&#9650;</button>
+            <button type="button" onclick="stepSlider('slashKernBeforeSlider',-1)" aria-label="Decrease">&#9660;</button>
+          </div>
+          <span id="slashKernBeforeDisplay" class="text-xs font-mono font-bold text-stone-700 min-w-[36px]">-3.0px</span>
+        </div>
+      </div>
+
+      <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">Post-Slash Kerning</label>
+        <div class="flex items-center gap-4">
+          <input type="range" id="slashKernSlider" min="-5" max="2" step="0.5" value="-1.5" oninput="updateSlashKern(this.value)" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+          <div class="stepper">
+            <button type="button" onclick="stepSlider('slashKernSlider',1)" aria-label="Increase">&#9650;</button>
+            <button type="button" onclick="stepSlider('slashKernSlider',-1)" aria-label="Decrease">&#9660;</button>
+          </div>
+          <span id="slashKernDisplay" class="text-xs font-mono font-bold text-stone-700 min-w-[36px]">-1.5px</span>
+        </div>
+      </div>
+
+      <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">Slash Size</label>
+        <div class="flex items-center gap-4">
+          <input type="range" id="slashSizeSlider" min="0.5" max="1.5" step="0.05" value="0.7" oninput="updateSlashSize(this.value)" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+          <div class="stepper">
+            <button type="button" onclick="stepSlider('slashSizeSlider',1)" aria-label="Increase">&#9650;</button>
+            <button type="button" onclick="stepSlider('slashSizeSlider',-1)" aria-label="Decrease">&#9660;</button>
+          </div>
+          <span id="slashSizeDisplay" class="text-xs font-mono font-bold text-stone-700 min-w-[36px]">0.70em</span>
+        </div>
+      </div>
+
+      <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">Denom Size</label>
+        <div class="flex items-center gap-4">
+          <input type="range" id="denSizeSlider" min="0.5" max="1.5" step="0.05" value="0.65" oninput="updateDenSize(this.value)" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+          <div class="stepper">
+            <button type="button" onclick="stepSlider('denSizeSlider',1)" aria-label="Increase">&#9650;</button>
+            <button type="button" onclick="stepSlider('denSizeSlider',-1)" aria-label="Decrease">&#9660;</button>
+          </div>
+          <span id="denSizeDisplay" class="text-xs font-mono font-bold text-stone-700 min-w-[36px]">0.65em</span>
+        </div>
+      </div>
+
+      <div class="bg-stone-50 p-3.5 rounded-xl border border-stone-200/60">
+        <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">Spare Row Dots Y-Offset</label>
+        <div class="flex items-center gap-4">
+          <input type="range" id="emptyDotYSlider" min="-8" max="8" step="1" value="-6" oninput="updateEmptyDotY(this.value)" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+          <div class="stepper">
+            <button type="button" onclick="stepSlider('emptyDotYSlider',1)" aria-label="Increase">&#9650;</button>
+            <button type="button" onclick="stepSlider('emptyDotYSlider',-1)" aria-label="Decrease">&#9660;</button>
+          </div>
+          <span id="emptyDotYDisplay" class="text-xs font-mono font-bold text-stone-700 min-w-[28px]">-6px</span>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="label-container bg-white p-2 md:p-6 rounded-2xl shadow-xl border border-stone-200/80 mb-8 flex flex-col items-center">
+    <div class="label shadow-inner" id="label" data-align="center"></div>
+    <div class="no-print mt-3 text-xs text-stone-400 font-sans flex items-center gap-2">
+      <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      Sized to fit Altoids inner lid 94mm x 58.4mm, corner radius = 14.8mm.
+    </div>
+  </div>
+
+  <div id="slotEditorModal" class="no-print fixed inset-0 bg-stone-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-[99999]">
+    <div class="bg-white rounded-2xl shadow-2xl border border-stone-200 max-w-md w-full overflow-hidden font-sans">
+      <div class="px-6 py-4 bg-stone-50 border-b border-stone-200 flex justify-between items-center">
+        <h3 id="modalTitle" class="font-bold text-stone-800 text-base">Edit Bit Slot</h3>
+        <div class="flex items-center gap-1.5">
+          <button onclick="navigateSlot(-1)" title="Previous Slot" class="p-1.5 rounded-lg text-stone-500 hover:text-stone-800 hover:bg-stone-200/70 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button onclick="navigateSlot(1)" title="Next Slot" class="p-1.5 rounded-lg text-stone-500 hover:text-stone-800 hover:bg-stone-200/70 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </button>
+          <div class="h-4 w-px bg-stone-300 mx-1"></div>
+          <button onclick="closeSlotEditor()" class="text-stone-400 hover:text-stone-600 p-1 rounded-lg transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-1.5">Bit Label / Name</label>
+          <input type="text" id="editLabelInput" placeholder="e.g. 4H, PH2, T10, 3/32" class="w-full px-3.5 py-2 border border-stone-300 rounded-xl text-stone-800 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition uppercase">
+          <p class="text-[11px] text-stone-400 mt-1">Use a slash (<code class="text-stone-600 font-bold">/</code>) to format as a stacked fraction.</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-1.5">Driver Shape Icon</label>
+            <select id="editTypeSelect" class="w-full px-3 py-2 border border-stone-300 rounded-xl text-stone-800 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition">
+              <option value="hex">Hexagon (Hex)</option>
+              <option value="torx">Torx Star</option>
+              <option value="ph">Phillips Cross</option>
+              <option value="slot">Slotted Minus</option>
+              <option value="square">Square / Robertson</option>
+              <option value="ywing">Y-Wing / Tri-Wing</option>
+              <option value="tri">Triangle</option>
+              <option value="penta">Pentalobe</option>
+              <option value="spanner">Spanner / Snake Eyes</option>
+              <option value="">No Icon (Empty Circle)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-1.5">Driver Size (mm)</label>
+            <input type="number" step="0.1" id="editSizeInput" placeholder="2.0" class="w-full px-3 py-2 border border-stone-300 rounded-xl text-stone-800 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition">
+          </div>
+        </div>
+      </div>
+
+      <div class="px-6 py-4 bg-stone-50 border-t border-stone-200 flex justify-between items-center">
+        <button onclick="clearSlotEditor()" class="px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl transition">Clear to Empty</button>
+        <div class="flex gap-2">
+          <button onclick="closeSlotEditor()" class="px-4 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-200/60 rounded-xl transition">Cancel</button>
+          <button onclick="saveSlotEditor()" class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition">Save Slot</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="configModal" class="no-print fixed inset-0 bg-stone-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-[99999]">
+    <div class="bg-white rounded-2xl shadow-2xl border border-stone-200 max-w-lg w-full overflow-hidden font-sans flex flex-col max-h-[90vh]">
+      <div class="px-6 py-4 bg-stone-50 border-b border-stone-200 flex justify-between items-center shrink-0">
+        <h3 class="font-bold text-stone-800 text-base">Import / Export Configuration</h3>
+        <button onclick="closeConfigModal()" class="text-stone-400 hover:text-stone-600 p-1 rounded-lg transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-6 space-y-4 overflow-y-auto shrink-1">
+        <div>
+          <label class="block text-xs font-semibold text-stone-600 uppercase tracking-wider mb-2">Configuration JSON</label>
+          <textarea id="configTextarea" rows="12" class="w-full px-3.5 py-3 border border-stone-300 rounded-xl text-stone-800 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition resize-none"></textarea>
+          <p class="text-[11px] text-stone-500 mt-2">Copy this text to save your layout, colors, and bit slots. Paste a previously saved configuration and click "Load Config" to restore it.</p>
+        </div>
+      </div>
+      <div class="px-6 py-4 bg-stone-50 border-t border-stone-200 flex justify-between items-center shrink-0">
+        <button onclick="copyConfig(event)" class="px-4 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-200/60 rounded-xl transition flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+          Copy to Clipboard
+        </button>
+        <div class="flex gap-2">
+          <button onclick="closeConfigModal()" class="px-4 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-200/60 rounded-xl transition">Cancel</button>
+          <button onclick="loadConfig(event)" class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition">Load Config</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let FILL_COLOR = '#000000';
+    let RING_COLOR = '#ff8647';
+    let TEXT_COLOR = '#0042aa';
+    let RING_SIZE = 24;
+    const MAX_SHAPE = 24;
+
+    const getShapes = (fillColor) => ({
+      hex: `<polygon points="50,4 89.8,27 89.8,73 50,96 10.2,73 10.2,27" fill="${fillColor}"/>`,
+      torx: (()=>{ 
+        const out=46, inr=29, pts=[];
+        for(let i=0; i<12; i++){
+          const a=i*Math.PI/6, r=i%2?inr:out;
+          pts.push((50+r*Math.sin(a)).toFixed(1)+','+(50-r*Math.cos(a)).toFixed(1));
+        }
+        return `<polygon points="${pts.join(' ')}" fill="${fillColor}"/>`; 
+      })(),
+      square: `<rect x="6" y="6" width="88" height="88" fill="${fillColor}"/>`,
+      slot: `<rect x="4" y="41" width="92" height="18" rx="8" fill="${fillColor}"/>`,
+      ph: `<polygon points="37,4 63,4 63,37 96,37 96,63 63,63 63,96 37,96 37,63 4,63 4,37 37,37" fill="${fillColor}"/>`,
+      ywing: `<g stroke="${fillColor}" stroke-width="18" stroke-linecap="round">
+        <line x1="50" y1="50" x2="50" y2="6"/>
+        <line x1="50" y1="50" x2="88" y2="72"/>
+        <line x1="50" y1="50" x2="12" y2="72"/></g>`,
+      tri: `<polygon points="50,6 91,72 9,72" fill="${fillColor}"/>`,
+      penta: (()=>{ 
+        const R=26, r=22, pts=[];
+        let out = `<circle cx="50" cy="50" r="17" fill="${fillColor}"/>`;
+        for(let i=0; i<5; i++){
+          const a = i*(2*Math.PI/5) - Math.PI/2;
+          const cx = (50 + R*Math.cos(a)).toFixed(1);
+          const cy = (50 + R*Math.sin(a)).toFixed(1);
+          out += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fillColor}"/>`;
+        }
+        return out;
+      })(),
+      spanner: `<circle cx="27" cy="50" r="15" fill="${fillColor}"/><circle cx="73" cy="50" r="15" fill="${fillColor}"/>`,
+    });
+
+    const rows = [
+      { spare:true, bits:[
+        null, null, null, null, null, null,
+        null, null, null, null, null, null
+      ]},
+      { bits:[
+        {n:'2',mm:3,type:'tri',group:'tri'},{n:'3',mm:5,type:'tri',group:'tri'},
+        {n:'000',mm:2.5,type:'ywing',group:'ywing'},{n:'00',mm:3,type:'ywing',group:'ywing'},{n:'Y0',mm:4,type:'ywing',group:'ywing'},{n:'Y1',mm:5,type:'ywing',group:'ywing'},{n:'Y2',mm:6,type:'ywing',group:'ywing'},
+        {n:'P2',mm:2.3,type:'penta',group:'penta'},{n:'P5',mm:3.3,type:'penta',group:'penta'},{n:'P6',mm:4.3,type:'penta',group:'penta'},
+        {n:'2',mm:2.4,type:'spanner',group:'spanner'},{n:'6',mm:4.4,type:'spanner',group:'spanner'},
+      ]},
+      { bits:[
+        {n:'0',mm:1.9,type:'ph',group:'ph'},{n:'1',mm:2.7,type:'ph',group:'ph'},{n:'2',mm:3.6,type:'ph',group:'ph'},{n:'3',mm:4.8,type:'ph',group:'ph'},
+        null,
+        {n:'2',mm:2,type:'slot',group:'slot'},{n:'4',mm:4,type:'slot',group:'slot'},{n:'6',mm:6,type:'slot',group:'slot'},
+        null,
+        {n:'1',mm:2.29,type:'square',group:'square'},{n:'2',mm:4,type:'square',group:'square'},
+        null
+      ]},
+      { bits:[
+        {n:'3',mm:1.1,type:'torx',group:'torx'},{n:'4',mm:1.28,type:'torx',group:'torx'},{n:'5',mm:1.42,type:'torx',group:'torx'},{n:'6',mm:1.7,type:'torx',group:'torx'},{n:'7',mm:1.99,type:'torx',group:'torx'},{n:'8',mm:2.31,type:'torx',group:'torx'},
+        {n:'9',mm:2.5,type:'torx',group:'torx'},{n:'10',mm:2.74,type:'torx',group:'torx'},{n:'15',mm:3.27,type:'torx',group:'torx'},{n:'20',mm:3.86,type:'torx',group:'torx'},{n:'25',mm:4.43,type:'torx',group:'torx'},{n:'30',mm:5.52,type:'torx',group:'torx'},
+      ]},
+      { bits:[
+        {n:'6',mm:6,type:'hex',group:'hexmm'},{n:'5',mm:5,type:'hex',group:'hexmm'},{n:'4H',mm:4.5,type:'hex',group:'hexmm'},{n:'4',mm:4,type:'hex',group:'hexmm'},{n:'3H',mm:3.5,type:'hex',group:'hexmm'},{n:'3',mm:3,type:'hex',group:'hexmm'},
+        {n:'2H',mm:2.5,type:'hex',group:'hexmm'},{n:'2',mm:2,type:'hex',group:'hexmm'},{n:'1H',mm:1.5,type:'hex',group:'hexmm'},{n:'H',mm:1.3,type:'hex',group:'hexmm'},
+        null, null
+      ]},
+      { bits:[
+        {n:'1/16',mm:1.588,type:'hex',group:'hexin'},{n:'5/64',mm:1.984,type:'hex',group:'hexin'},{n:'3/32',mm:2.381,type:'hex',group:'hexin'},{n:'7/64',mm:2.778,type:'hex',group:'hexin'},{n:'1/8',mm:3.175,type:'hex',group:'hexin'},
+        {n:'9/64',mm:3.572,type:'hex',group:'hexin'},{n:'5/32',mm:3.969,type:'hex',group:'hexin'},{n:'3/16',mm:4.763,type:'hex',group:'hexin'},{n:'7/32',mm:5.556,type:'hex',group:'hexin'},{n:'1/4',mm:6.35,type:'hex',group:'hexin'},
+        null, null
+      ]},
+    ];
+
+    let globalMaxMm = 6.35;
+    function recalculateRanges() {
+      globalMaxMm = 0;
+      rows.forEach(r => r.bits.forEach(b => {
+        if(b && b.mm) globalMaxMm = Math.max(globalMaxMm, b.mm);
+      }));
+      if (globalMaxMm === 0) globalMaxMm = 6.35;
+    }
+    recalculateRanges();
+
+    function shapePx(mm){
+      if(!globalMaxMm) return RING_SIZE;
+      return (mm / globalMaxMm) * RING_SIZE;
+    }
+
+    function shapeSvg(type, mm, fillColor){
+      const size = type ? shapePx(mm) : 0;
+      const shapesObj = getShapes(fillColor);
+      const ring = `<svg class="shapebg" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 0; width:${RING_SIZE}px; height:${RING_SIZE}px" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="${RING_COLOR}" stroke="none"/></svg>`;
+      const shape = type && shapesObj[type] ? `<svg class="shapebg" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 0; width:${size}px; height:${size}px" viewBox="0 0 100 100">${shapesObj[type]}</svg>` : '';
+      return `<div class="shape-container" style="width: ${RING_SIZE}px; height: ${RING_SIZE}px;">${ring}${shape}</div>`;
+    }
+
+    function renderLabel() {
+      const label = document.getElementById('label');
+      label.innerHTML = '';
+      rows.forEach((r, rIdx) => {
+        const row = document.createElement('div');
+        row.className = 'row' + (r.spare ? ' spares' : '');
+        r.bits.forEach((b, cIdx) => {
+          const c = document.createElement('div');
+          c.className = 'cell' + (b ? '' : ' empty') + (r.spare ? ' spare-cell' : '');
+          if (!r.spare) {
+            c.title = "Click to edit bit slot";
+            c.onclick = () => openSlotEditor(rIdx, cIdx);
+          }
+          if(!b){
+            c.innerHTML = `<div class="shape-container" style="width: ${RING_SIZE}px; height: ${RING_SIZE}px;"><span class="empty-dot"></span></div>`;
+            row.appendChild(c);
+            return;
+          }
+          let bg = b !== null ? shapeSvg(b.type, b.mm, FILL_COLOR) : '';
+          let offsetClass = '';
+          if (b.n === '000') offsetClass = ' y000-offset';
+          else if (b.n === '00') offsetClass = ' y00-offset';
+          else if (b.n && b.n.includes('/')) offsetClass = ' frac-offset';
+
+          let labelContent = b.n || '';
+          if (b.n && b.n.includes('/')) {
+            const parts = b.n.split('/');
+            if (parts.length === 2) {
+              labelContent = `<span class="inline-frac"><span class="num">${parts[0]}</span><span class="sub-frac"><span class="slash">/</span><span class="den">${parts[1]}</span></span></span>`;
+            }
+          }
+          c.innerHTML = bg + (b.n ? `<span class="cell-label${offsetClass}">${labelContent}</span>` : '');
+          row.appendChild(c);
+        });
+        label.appendChild(row);
+      });
+    }
+
+    function stepSlider(id, dir) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const step = parseFloat(el.step) || 1;
+      const min = parseFloat(el.min);
+      const max = parseFloat(el.max);
+      const decimals = (el.step.split('.')[1] || '').length;
+      let val = parseFloat(el.value) + dir * step;
+      val = Math.min(max, Math.max(min, val));
+      val = parseFloat(val.toFixed(decimals));
+      el.value = val;
+      el.dispatchEvent(new Event('input'));
+    }
+
+    function updateFillColor(hexValue) {
+      FILL_COLOR = hexValue;
+      document.getElementById('fillColorHex').textContent = hexValue;
+      renderLabel();
+    }
+    function updateRingColor(hexValue) {
+      RING_COLOR = hexValue;
+      document.getElementById('ringColorHex').textContent = hexValue;
+      renderLabel();
+    }
+    function updateTextColor(hexValue) {
+      TEXT_COLOR = hexValue;
+      document.documentElement.style.setProperty('--text-color', hexValue);
+      document.getElementById('textColorHex').textContent = hexValue;
+    }
+    function updateDenColor(hexValue) {
+      document.documentElement.style.setProperty('--den-color', hexValue);
+      document.getElementById('denColorHex').textContent = hexValue;
+    }
+    function updateRingSize(value) {
+      RING_SIZE = parseInt(value, 10);
+      document.getElementById('ringSizeDisplay').textContent = value + 'px';
+      renderLabel();
+    }
+    function updateFontSize(value) {
+      document.documentElement.style.setProperty('--font-size', value + 'px');
+      document.getElementById('fontSizeDisplay').textContent = Number(value).toFixed(1) + 'px';
+    }
+    function updateLabelX(value) {
+      document.documentElement.style.setProperty('--label-x', value + 'px');
+      document.getElementById('labelXDisplay').textContent = value + 'px';
+    }
+    function updateLabelY(value) {
+      document.documentElement.style.setProperty('--label-y', value + 'px');
+      document.getElementById('labelYDisplay').textContent = value + 'px';
+    }
+    function updateLabelOutlineY(value) {
+      document.documentElement.style.setProperty('--label-outline-y', value + 'px');
+      document.getElementById('labelOutlineYDisplay').textContent = value + 'px';
+    }
+    function updateAlignment(align) {
+      document.documentElement.style.setProperty('--label-align', align);
+      document.getElementById('label').dataset.align = align;
+      ['left', 'center', 'right'].forEach(a => {
+        const btn = document.getElementById('align' + a.charAt(0).toUpperCase() + a.slice(1) + 'Btn');
+        if (a === align) btn.className = "px-2.5 py-1.5 text-xs font-medium rounded-md bg-stone-200 border border-stone-300 text-stone-800 transition grow";
+        else btn.className = "px-2.5 py-1.5 text-xs font-medium rounded-md bg-stone-100 text-stone-600 hover:bg-stone-200 transition grow";
+      });
+    }
+    function updateFracX(value) {
+      document.documentElement.style.setProperty('--frac-x', value + 'px');
+      document.getElementById('fracXDisplay').textContent = value + 'px';
+    }
+    function updateY000Offset(value) {
+      document.documentElement.style.setProperty('--y000-offset', value + 'px');
+      document.getElementById('y000OffsetDisplay').textContent = value + 'px';
+    }
+    function updateY000Scale(value) {
+      document.documentElement.style.setProperty('--y000-scale', value);
+      document.getElementById('y000ScaleDisplay').textContent = Number(value).toFixed(2) + 'x';
+    }
+    function updateY00Offset(value) {
+      document.documentElement.style.setProperty('--y00-offset', value + 'px');
+      document.getElementById('y00OffsetDisplay').textContent = value + 'px';
+    }
+    function updateSlashKernBefore(value) {
+      document.documentElement.style.setProperty('--slash-kern-before', value + 'px');
+      document.getElementById('slashKernBeforeDisplay').textContent = Number(value).toFixed(1) + 'px';
+    }
+    function updateSlashKern(value) {
+      document.documentElement.style.setProperty('--slash-kern', value + 'px');
+      document.getElementById('slashKernDisplay').textContent = Number(value).toFixed(1) + 'px';
+    }
+    function updateSlashSize(value) {
+      document.documentElement.style.setProperty('--slash-size', value + 'em');
+      document.getElementById('slashSizeDisplay').textContent = Number(value).toFixed(2) + 'em';
+    }
+    function updateDenSize(value) {
+      document.documentElement.style.setProperty('--den-size', value + 'em');
+      document.getElementById('denSizeDisplay').textContent = Number(value).toFixed(2) + 'em';
+    }
+    function updateEmptyDotY(value) {
+      document.documentElement.style.setProperty('--empty-dot-y', value + 'px');
+      document.getElementById('emptyDotYDisplay').textContent = value + 'px';
+    }
+
+    let activeRowIdx = null;
+    let activeColIdx = null;
+    let advancedVisible = false;
+
+    function toggleAdvanced() {
+      advancedVisible = !advancedVisible;
+      const section = document.getElementById('advancedSection');
+      const btn = document.getElementById('advancedToggleText');
+      if (advancedVisible) {
+        section.classList.remove('hidden');
+        btn.textContent = 'Hide Advanced';
+      } else {
+        section.classList.add('hidden');
+        btn.textContent = 'Show Advanced';
+      }
+    }
+
+    function openSlotEditor(rIdx, cIdx) {
+      activeRowIdx = rIdx; activeColIdx = cIdx;
+      const bit = rows[rIdx]?.bits[cIdx];
+      document.getElementById('modalTitle').textContent = `Edit Slot (Row ${rIdx + 1}, Col ${cIdx + 1})`;
+      document.getElementById('editLabelInput').value = bit ? bit.n : '';
+      document.getElementById('editTypeSelect').value = bit ? (bit.type || '') : 'hex';
+      document.getElementById('editSizeInput').value = bit ? bit.mm : 2.0;
+      document.getElementById('slotEditorModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('editLabelInput').focus(), 50);
+    }
+    function navigateSlot(step) {
+      if (activeRowIdx === null || activeColIdx === null) return;
+      let r = activeRowIdx, c = activeColIdx + step;
+      const totalCols = rows[0].bits.length;
+      while (r >= 0 && r < rows.length) {
+        while (c >= 0 && c < totalCols) {
+          if (!rows[r].spare) {
+            openSlotEditor(r, c);
+            return;
+          }
+          c += step > 0 ? 1 : -1;
+        }
+        if (step > 0) { r++; c = 0; } else { r--; c = totalCols - 1; }
+      }
+    }
+    function closeSlotEditor() {
+      document.getElementById('slotEditorModal').classList.add('hidden');
+      activeRowIdx = null; activeColIdx = null;
+    }
+    function clearSlotEditor() {
+      if (activeRowIdx !== null && activeColIdx !== null) {
+        rows[activeRowIdx].bits[activeColIdx] = null;
+        recalculateRanges();
+        renderLabel();
+        persistState();
+        closeSlotEditor();
+      }
+    }
+    function saveSlotEditor() {
+      if (activeRowIdx === null || activeColIdx === null) return;
+      const labelVal = document.getElementById('editLabelInput').value.trim().toUpperCase();
+      const typeVal = document.getElementById('editTypeSelect').value;
+      const sizeVal = parseFloat(document.getElementById('editSizeInput').value) || 2.0;
+      if (!labelVal) { clearSlotEditor(); return; }
+      let groupVal = typeVal;
+      if (typeVal === 'hex') groupVal = labelVal.includes('/') ? 'hexin' : 'hexmm';
+      rows[activeRowIdx].bits[activeColIdx] = { n: labelVal, mm: sizeVal, type: typeVal || null, group: typeVal ? groupVal : null };
+      recalculateRanges(); renderLabel(); persistState(); closeSlotEditor();
+    }
+
+    function getConfigObject() {
+      return {
+        fillColor: FILL_COLOR, ringColor: RING_COLOR, textColor: TEXT_COLOR,
+        denColor: document.documentElement.style.getPropertyValue('--den-color') || '#939393',
+        ringSize: RING_SIZE, fontSize: document.getElementById('fontSizeSlider').value,
+        labelX: document.getElementById('labelXSlider').value,
+        labelY: document.getElementById('labelYSlider')?.value || -1,
+        labelOutlineY: document.getElementById('labelOutlineYSlider')?.value || 0,
+        labelAlign: document.documentElement.style.getPropertyValue('--label-align') || 'center',
+        fracX: document.getElementById('fracXSlider').value,
+        y000Offset: document.getElementById('y000OffsetSlider')?.value || -1,
+        y000Scale: document.getElementById('y000ScaleSlider')?.value || 0.9,
+        y00Offset: document.getElementById('y00OffsetSlider')?.value || 5,
+        slashKernBefore: document.getElementById('slashKernBeforeSlider')?.value || -3,
+        slashKern: document.getElementById('slashKernSlider').value,
+        slashSize: document.getElementById('slashSizeSlider').value,
+        denSize: document.getElementById('denSizeSlider').value,
+        emptyDotY: document.getElementById('emptyDotYSlider')?.value || -6,
+        slots: rows
+      };
+    }
+    function openConfigModal() {
+      document.getElementById('configTextarea').value = JSON.stringify(getConfigObject(), null, 2);
+      document.getElementById('configModal').classList.remove('hidden');
+    }
+    function closeConfigModal() {
+      document.getElementById('configModal').classList.add('hidden');
+    }
+    function copyConfig(e) {
+      const textarea = document.getElementById('configTextarea');
+      textarea.select(); document.execCommand('copy');
+      const btn = e.currentTarget;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Copied!`;
+      setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+    }
+    function applyConfig(config) {
+      if (config.fillColor) { document.getElementById('fillColorPicker').value = config.fillColor; updateFillColor(config.fillColor); }
+      if (config.ringColor) { document.getElementById('ringColorPicker').value = config.ringColor; updateRingColor(config.ringColor); }
+      if (config.textColor) { document.getElementById('textColorPicker').value = config.textColor; updateTextColor(config.textColor); }
+      if (config.denColor) { document.getElementById('denColorPicker').value = config.denColor; updateDenColor(config.denColor); }
+      if (config.fontSize) { document.getElementById('fontSizeSlider').value = config.fontSize; updateFontSize(config.fontSize); }
+      if (config.labelX !== undefined) { document.getElementById('labelXSlider').value = config.labelX; updateLabelX(config.labelX); }
+      if (config.labelY !== undefined) { document.getElementById('labelYSlider').value = config.labelY; updateLabelY(config.labelY); }
+      if (config.labelOutlineY !== undefined) { document.getElementById('labelOutlineYSlider').value = config.labelOutlineY; updateLabelOutlineY(config.labelOutlineY); }
+      if (config.labelAlign) updateAlignment(config.labelAlign);
+      if (config.fracX !== undefined) { document.getElementById('fracXSlider').value = config.fracX; updateFracX(config.fracX); }
+      if (config.y000Offset !== undefined) { document.getElementById('y000OffsetSlider').value = config.y000Offset; updateY000Offset(config.y000Offset); }
+      if (config.y000Scale !== undefined) { document.getElementById('y000ScaleSlider').value = config.y000Scale; updateY000Scale(config.y000Scale); }
+      if (config.y00Offset !== undefined) { document.getElementById('y00OffsetSlider').value = config.y00Offset; updateY00Offset(config.y00Offset); }
+      if (config.slashKernBefore !== undefined) { document.getElementById('slashKernBeforeSlider').value = config.slashKernBefore; updateSlashKernBefore(config.slashKernBefore); }
+      if (config.slashKern !== undefined) { document.getElementById('slashKernSlider').value = config.slashKern; updateSlashKern(config.slashKern); }
+      if (config.slashSize) { document.getElementById('slashSizeSlider').value = config.slashSize; updateSlashSize(config.slashSize); }
+      if (config.denSize) { document.getElementById('denSizeSlider').value = config.denSize; updateDenSize(config.denSize); }
+      if (config.emptyDotY !== undefined) { document.getElementById('emptyDotYSlider').value = config.emptyDotY; updateEmptyDotY(config.emptyDotY); }
+      if (config.slots && Array.isArray(config.slots)) { rows.splice(0, rows.length, ...config.slots); recalculateRanges(); }
+      renderLabel();
+    }
+
+    function loadConfig(e) {
+      const btn = e.currentTarget;
+      const originalText = btn.innerHTML;
+      try {
+        const config = JSON.parse(document.getElementById('configTextarea').value);
+        applyConfig(config);
+        persistState();
+        closeConfigModal();
+      } catch (err) {
+        btn.innerHTML = `<span class="text-red-100">Invalid JSON</span>`;
+        setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+      }
+    }
+
+    const STORAGE_KEY = 'altoidsLabelWorkspaceState';
+    function persistState() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(getConfigObject())); } catch (err) {}
+    }
+    function restoreState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!saved) return false;
+        applyConfig(JSON.parse(saved));
+        return true;
+      } catch (err) { return false; }
+    }
+
+    if (!restoreState()) renderLabel();
+  </script>
+</body>
+</html>
